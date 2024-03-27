@@ -3,6 +3,11 @@ import { Client, Events, GatewayIntentBits, SlashCommandBuilder, Collection } fr
 import { request, gql } from 'graphql-request';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const formatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'RUB',
+  maximumFractionDigits: 0,
+});
 
 const commandBuilder = {
   data: new SlashCommandBuilder()
@@ -24,13 +29,21 @@ const commands = [
   },
   {
     name: 'items',
-    description: 'Returns item information',
+    description: 'Returns item information and estimated price',
     options: [
       {
         name: 'item',
         description: 'Search for a specific item',
         type: 3,
         required: true,
+      },
+      {
+        name: 'limit',
+        description: 'Set a limit for retrieved items - lower limit results in faster pull',
+        type: 4,
+        required: false,
+        minValue: 1,
+        maxValue: 10,
       }
     ]
   }
@@ -71,13 +84,18 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply(`Congrats! You've found the secret Epod command!`);
   } else if (interaction.commandName === 'items') {
     const item = interaction.options.getString('item');
-    console.log(item);
-    const itemInfo = await getItemInfo(item);
+    const limit = interaction.options.getInteger('limit') === undefined ? 1 : interaction.options.getInteger('limit');
+
+    console.log('limit ' + typeof(limit));
+
+    const itemInfo = await getItemInfo(item, limit);
     
     if (itemInfo.length === 0) {
       await interaction.reply(`Item "${item}" was not found...`)
     } else {
       let reply = "";
+
+      await interaction.deferReply();
 
       for (let i = 0; i < itemInfo.length; i++) {
         reply += itemInfo[i].name + " - ";
@@ -93,13 +111,13 @@ client.on('interactionCreate', async interaction => {
 
         console.log('price: ' + price);
 
-        reply += price;
+        reply += price === 'N/A' ? price : formatter.format(price);
 
         reply += '\n';
       }
 
       console.log('info: ' + reply);
-      await interaction.reply(reply);
+      await interaction.editReply({content: reply, ephemeral: true});
     }
     
   } else {
@@ -115,10 +133,10 @@ async function getGoonLocation() {
     return goonInfo;
 }
 
-async function getItemInfo(item) {
+async function getItemInfo(item, limit) {
   const query = gql`
     {
-      items(name: "${item}") {
+      items(name: "${item}", limit: ${limit}) {
         name
         id
       }
