@@ -2,6 +2,8 @@ import { REST, Routes } from 'discord.js';
 import { Client, Events, GatewayIntentBits, SlashCommandBuilder, Collection } from 'discord.js';
 import { request, gql } from 'graphql-request';
 
+import 'dotenv/config'
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -49,12 +51,12 @@ const commands = [
   }
 ];
 
-const rest = new REST({ version: '10' }).setToken("MTIyMjM0MTQyOTM3MjY1MzU4OQ.GxFMal.vM1gXsK5ETUrIErk-u2nD2n2MZi3cu5ZmH2caI");
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 try {
   console.log('Started refreshing application (/) commands.');
 
-  await rest.put(Routes.applicationCommands("1222341429372653589"), { body: commands });
+  await rest.put(Routes.applicationCommands(process.env.CLIENT_SECRET), { body: commands });
   // client.commands = new Collection();
   // client.commands.set('test', commandBuilder);
 
@@ -79,7 +81,7 @@ client.on('interactionCreate', async interaction => {
     const location = goonLocation['Current Map'][0];
     const time = goonLocation.Time[0];
 
-    await interaction.reply(`The Goons are on ${location}, which was last reported on ${time}`);
+    await interaction.reply({content: `The Goons are on ${location}, which was last reported on ${time}`, ephemeral: true});
   } else if (interaction.commandName === 'epod') {
     await interaction.reply(`Congrats! You've found the secret Epod command!`);
   } else if (interaction.commandName === 'items') {
@@ -95,7 +97,7 @@ client.on('interactionCreate', async interaction => {
     } else {
       let reply = "";
 
-      await interaction.deferReply();
+      await interaction.deferReply({ephemeral: true});
 
       for (let i = 0; i < itemInfo.length; i++) {
         reply += itemInfo[i].name + " - ";
@@ -117,7 +119,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       console.log('info: ' + reply);
-      await interaction.editReply({content: reply, ephemeral: true});
+      await interaction.editReply({content: reply, ephemeral: "true"});
     }
     
   } else {
@@ -167,4 +169,4 @@ async function getItemPricesById(id) {
   return result.historicalItemPrices;
 }
 
-client.login("MTIyMjM0MTQyOTM3MjY1MzU4OQ.GxFMal.vM1gXsK5ETUrIErk-u2nD2n2MZi3cu5ZmH2caI");
+client.login(process.env.TOKEN);
